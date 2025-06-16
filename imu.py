@@ -15,13 +15,23 @@ class ISM330DLC:
     # I2C addresses (depends on SA0 pin connection)
     ADDR_LOW = 0x6A   # SA0 connected to GND
     ADDR_HIGH = 0x6B  # SA0 connected to VDD
-    
+
     # Register addresses
     WHO_AM_I = 0x0F
-    CTRL1_XL = 0x10   # Accelerometer control register 1
+    
     CTRL2_G = 0x11    # Gyroscope control register 2
     STATUS_REG = 0x1E
+
+    ### Accelerometer register addresses
+    CTRL1_XL = 0x10   # Accelerometer control register 1
+    XL_HM_MODE = 0x15 # 0 = enable high performance 
+    X_OFS_USR  = 0x73
+    Y_OFS_USR  = 0x74
+    Z_OFS_USR  = 0x75
     
+    # Accelerometer constants
+    XL_OFFSET_SCALE = 0.000976525 # assumes default setting in (0x15 USR_OFF_W)
+
     # Accelerometer output registers
     OUTX_L_XL = 0x28
     OUTX_H_XL = 0x29
@@ -85,10 +95,15 @@ class ISM330DLC:
         except:
             return False
     
+    def _configure_accelerometer(self):
+        self.bus.write_byte_data(self.address, self.XL_HM_MODE, 0x50)
+        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x50)
+
+
     def _initialize_sensor(self):
         """Initialize sensor with basic configuration"""
         # Configure accelerometer: 208 Hz, ±2g, no low-pass filter
-        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x50)
+        
         
         # Configure gyroscope: 208 Hz, ±250 dps
         self.bus.write_byte_data(self.address, self.CTRL2_G, 0x50)
