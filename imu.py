@@ -186,17 +186,18 @@ def main():
         print("Format: Accel(x,y,z)[g] | Gyro(x,y,z)[deg/s]")
         print("-" * 60)
         
-        while True:
-            # Read sensor data
-            data = sensor.read_all()
-            accel = data['accel']
-            gyro = data['gyro']
+        # while True:
+        #     # Read sensor data
+        #     data = sensor.read_all()
+        #     accel = data['accel']
+        #     gyro = data['gyro']
             
-            # Format and display data
-            print(f"Accel: {accel[0]:6.3f}, {accel[1]:6.3f}, {accel[2]:6.3f} | "
-                  f"Gyro: {gyro[0]:7.2f}, {gyro[1]:7.2f}, {gyro[2]:7.2f}")
+        #     # Format and display data
+        #     print(f"Accel: {accel[0]:6.3f}, {accel[1]:6.3f}, {accel[2]:6.3f} | "
+        #           f"Gyro: {gyro[0]:7.2f}, {gyro[1]:7.2f}, {gyro[2]:7.2f}")
             
-            time.sleep(0.1)  # 10 Hz update rate
+        #     time.sleep(0.1)  # 10 Hz update rate
+        x, y, z = sensor.read_accelerometer()
             
     except KeyboardInterrupt:
         print("\nStopping sensor readings...")
