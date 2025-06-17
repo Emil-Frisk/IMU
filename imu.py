@@ -18,17 +18,18 @@ class ISM330DLC:
 
     # Register addresses
     WHO_AM_I = 0x0F
-    
     CTRL2_G = 0x11    # Gyroscope control register 2
     STATUS_REG = 0x1E
 
+
     ### Accelerometer register addresses
     CTRL1_XL = 0x10   # Accelerometer control register 1
-    XL_HM_MODE = 0x15 # 0 = enable high performance 
+    CTRL6_C = 0x15 # 0 enable high performance XL_HM_MODE
+    CTRL8_XL = 0x17 # 0 -> disabale all filters
     X_OFS_USR  = 0x73
     Y_OFS_USR  = 0x74
     Z_OFS_USR  = 0x75
-    
+
     # Accelerometer constants
     XL_OFFSET_SCALE = 0.000976525 # assumes default setting in (0x15 USR_OFF_W)
 
@@ -51,7 +52,10 @@ class ISM330DLC:
     # Expected WHO_AM_I value
     WHO_AM_I_VAL = 0x6A
     
-    def __init__(self, bus_num=1, address=None):
+    def _disable_accelerometer_filters(self):
+        self.bus.write_byte_data(self.address, self.CTRL8_XL, 0x0) 
+
+    def __init__(self, bus_num=1, address=None, ODR=12.5, disable_xl_filters=True):
         """
         Initialize ISM330DLC sensor
         
@@ -60,6 +64,10 @@ class ISM330DLC:
             address: I2C address (if None, will try to detect)
         """
         self.bus = smbus.SMBus(bus_num)
+
+        # accelerometer register values
+        self.ODR = ODR
+        self._disable_xl_filters = disable_xl_filters
         
         if address is None:
             # Try to detect the correct address
@@ -96,17 +104,15 @@ class ISM330DLC:
             return False
     
     def _configure_accelerometer(self):
-        self.bus.write_byte_data(self.address, self.XL_HM_MODE, 0x50)
-        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x50)
+        self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) ### high performance mode
+        if self.disabale_xl_filters:
+            self._disable_accelerometer_filters()
+        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz
 
 
     def _initialize_sensor(self):
         """Initialize sensor with basic configuration"""
-        # Configure accelerometer: 208 Hz, ±2g, no low-pass filter
-        
-        
-        # Configure gyroscope: 208 Hz, ±250 dps
-        self.bus.write_byte_data(self.address, self.CTRL2_G, 0x50)
+        self._configure_accelerometer()
         
         # Wait for sensor to stabilize
         time.sleep(0.1)
