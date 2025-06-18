@@ -8,6 +8,7 @@ INT32_MIN=-32768
 INT32_MAX=32767
 
 import smbus
+import math
 import time
 import struct
 
@@ -55,7 +56,7 @@ class ISM330DLC:
     def _disable_accelerometer_filters(self):
         self.bus.write_byte_data(self.address, self.CTRL8_XL, 0x0) 
 
-    def __init__(self, bus_num=1, address=None, ODR=12.5, disable_xl_filters=True):
+    def __init__(self, bus_num=1, address=None, ODR=12.5, disable_xl_filters=True, g_range=2):
         """
         Initialize ISM330DLC sensor
         
@@ -68,6 +69,7 @@ class ISM330DLC:
         # accelerometer register values
         self.ODR = ODR
         self._disable_xl_filters = disable_xl_filters
+        self.g_range = g_range
         
         if address is None:
             # Try to detect the correct address
@@ -80,9 +82,6 @@ class ISM330DLC:
             
         self._initialize_sensor()
     
-    def _normalize_accelerometer_value(raw_value, g_range=2):
-        return raw_value * (g_range/32768)
-
     def _detect_address(self):
         """Try to detect the correct I2C address"""
         for addr in [self.ADDR_LOW, self.ADDR_HIGH]:
@@ -107,7 +106,12 @@ class ISM330DLC:
         self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) ### high performance mode
         if self.disabale_xl_filters:
             self._disable_accelerometer_filters()
-        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz -> sample rate = 6.25hz
+        
+        if self.g_range == 2:
+            self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz -> sample rate = 6.25hz
+        else:
+            raise Exception("Unsupported g_range")
+
 
     def _initialize_sensor(self):
         """Initialize sensor with basic configuration"""
@@ -125,23 +129,38 @@ class ISM330DLC:
         value = (high << 8) | low
         return struct.unpack('<h', struct.pack('<H', value))[0]
     
+    def calculate_pitch_roll(x, y, z):
+        # Calculate pitch (rotation around X-axis)
+        pitch = math.atan2(y, math.sqrt(x*x + z*z))
+        
+        # Calculate roll (rotation around Y-axis)  
+        roll = math.atan2(-x, z)
+        
+        # Convert from radians to degrees
+        pitch_degrees = math.degrees(pitch)
+        roll_degrees = math.degrees(roll)
+        
+        return pitch_degrees, roll_degrees
+
+    def _scale_xl_values(self, x_raw, y_raw, z_raw):
+        x = x_raw * (self.g_range * 32768.0)
+        y = y_raw * (self.g_range * 32768.0)
+        z = z_raw * (self.g_range * 32768.0)
+        return x, y, z
+
     def read_accelerometer(self):
         """
         Read accelerometer data
         
         Returns:
-            tuple: (x, y, z) acceleration in g units
+            tuple: (x, y, z) returns in angles
         """
         x_raw = self._read_raw_axis(self.OUTX_L_XL, self.OUTX_H_XL)
         y_raw = self._read_raw_axis(self.OUTY_L_XL, self.OUTY_H_XL)
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
         
-        # Convert to g units (±2g range, 16-bit resolution)
-        scale = 2.0 / 32768.0
-        x = x_raw * scale
-        y = y_raw * scale
-        z = z_raw * scale
-        
+        x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        x, y, z = self.calculate_pitch_roll(x, y, z)
         return (x, y, z)
     
     def read_gyroscope(self):
