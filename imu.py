@@ -107,8 +107,7 @@ class ISM330DLC:
         self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) ### high performance mode
         if self.disabale_xl_filters:
             self._disable_accelerometer_filters()
-        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz
-
+        self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz -> sample rate = 6.25hz
 
     def _initialize_sensor(self):
         """Initialize sensor with basic configuration"""
