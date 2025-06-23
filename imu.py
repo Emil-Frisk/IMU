@@ -160,8 +160,8 @@ class ISM330DLC:
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
         
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
-        x, y, z = self.calculate_pitch_roll(x, y, z)
-        return (x, y, z)
+        pitch, roll = self.calculate_pitch_roll(x, y, z)
+        return (pitch, roll)
     
     def read_gyroscope(self):
         """
