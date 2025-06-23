@@ -215,7 +215,8 @@ def main():
         #           f"Gyro: {gyro[0]:7.2f}, {gyro[1]:7.2f}, {gyro[2]:7.2f}")
             
         #     time.sleep(0.1)  # 10 Hz update rate
-        x, y, z = sensor.read_accelerometer()
+        p, r = sensor.read_accelerometer()
+        print(f"pitch: {p:.2f} | roll: {r:.2f}")
             
     except KeyboardInterrupt:
         print("\nStopping sensor readings...")
