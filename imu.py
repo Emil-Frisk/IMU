@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Basic ISM330DLC 6-axis IMU sensor interface for Raspberry Pi
+Basic ISM330
+DLC 6-axis IMU sensor interface for Raspberry Pi
 Supports accelerometer and gyroscope data reading via I2C
 """
 
@@ -139,24 +140,9 @@ class ISM330DLC:
         return struct.unpack('<h', struct.pack('<H', value))[0]
     
     def calculate_pitch_roll(self, x, y, z):
-<<<<<<< HEAD
         # Calculate pitch (rotation around Y-axis)
         pitch = math.atan2(x, math.sqrt(y*y + z*z))
-=======
-        # Calculate pitch (rotation around X-axis)
-        pitch = math.atan2(y, math.sqrt(x*x + z*z))
-        
         # Calculate roll (rotation around Y-axis)  
-        roll = math.atan2(-x, z)
-        
-        # Convert from radians to degrees
-        pitch_degrees = math.degrees(pitch)
-        roll_degrees = math.degrees(roll)
-        
-        return pitch_degrees, roll_degrees
->>>>>>> e101f0f87ad9adfe1b04a05b8b213ed0efe646e5
-
-        # Calculate roll (rotation around X-axis)
         roll = math.atan2(y, math.sqrt(x*x + z*z))
 
         # Convert from radians to degrees
@@ -182,11 +168,7 @@ class ISM330DLC:
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
         
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
-<<<<<<< HEAD
         print(f"{x,y,z}")
-=======
-
->>>>>>> e101f0f87ad9adfe1b04a05b8b213ed0efe646e5
         pitch, roll = self.calculate_pitch_roll(x, y, z)
         return (pitch, roll)
     
@@ -225,7 +207,7 @@ def main():
     """Example usage of the ISM330DLC sensor"""
     try:
         # Initialize sensor (will auto-detect address)
-        sensor = ISM330DLC(address=0x6A)
+        sensor = ISM330DLC(address=0x6A, disable_xl_filters=False)
         
         print("Starting sensor readings (Ctrl+C to stop)...")
         print("Format: Accel(x,y,z)[g] | Gyro(x,y,z)[deg/s]")
