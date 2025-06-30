@@ -6,7 +6,7 @@ Supports accelerometer and gyroscope data reading via I2C
 
 INT32_MIN=-32768
 INT32_MAX=32767
-
+import pdb
 import smbus
 import math
 import time
@@ -77,8 +77,8 @@ class ISM330DLC:
         else:
             self.address = address
             
-        if not self._check_connection():
-            raise Exception("ISM330DLC not found or not responding")
+        # if not self._check_connection():
+            # raise Exception("ISM330DLC not found or not responding")
             
         self._initialize_sensor()
     
@@ -97,6 +97,7 @@ class ISM330DLC:
     def _check_connection(self):
         """Verify sensor connection by reading WHO_AM_I register"""
         try:
+            breakpoint()
             who_am_i = self.bus.read_byte_data(self.address, self.WHO_AM_I)
             return who_am_i == self.WHO_AM_I_VAL
         except:
@@ -104,7 +105,7 @@ class ISM330DLC:
     
     def _configure_accelerometer(self):
         self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) ### high performance mode
-        if self.disabale_xl_filters:
+        if self._disable_xl_filters:
             self._disable_accelerometer_filters()
         
         if self.g_range == 2:
@@ -129,23 +130,22 @@ class ISM330DLC:
         value = (high << 8) | low
         return struct.unpack('<h', struct.pack('<H', value))[0]
     
-    def calculate_pitch_roll(x, y, z):
-        # Calculate pitch (rotation around X-axis)
-        pitch = math.atan2(y, math.sqrt(x*x + z*z))
-        
-        # Calculate roll (rotation around Y-axis)  
-        roll = math.atan2(-x, z)
-        
-        # Convert from radians to degrees
-        pitch_degrees = math.degrees(pitch)
-        roll_degrees = math.degrees(roll)
-        
-        return pitch_degrees, roll_degrees
+    def calculate_pitch_roll(self, x, y, z):
+        # Calculate pitch (rotation around Y-axis)
+        pitch = math.atan2(x, math.sqrt(y*y + z*z))
 
+        # Calculate roll (rotation around X-axis)
+        roll = math.atan2(y, math.sqrt(x*x + z*z))
+
+        # Convert from radians to degrees
+        pitch_degrees = math.degrees(pitch) - 0.25 
+        roll_degrees = math.degrees(roll) + 1
+
+        return pitch_degrees, roll_degrees
     def _scale_xl_values(self, x_raw, y_raw, z_raw):
-        x = x_raw * (self.g_range * 32768.0)
-        y = y_raw * (self.g_range * 32768.0)
-        z = z_raw * (self.g_range * 32768.0)
+        x = x_raw * (self.g_range / 32768.0)
+        y = y_raw * (self.g_range / 32768.0)
+        z = z_raw * (self.g_range / 32768.0)
         return x, y, z
 
     def read_accelerometer(self):
@@ -160,6 +160,7 @@ class ISM330DLC:
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
         
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        print(f"{x,y,z}")
         pitch, roll = self.calculate_pitch_roll(x, y, z)
         return (pitch, roll)
     
@@ -198,7 +199,7 @@ def main():
     """Example usage of the ISM330DLC sensor"""
     try:
         # Initialize sensor (will auto-detect address)
-        sensor = ISM330DLC()
+        sensor = ISM330DLC(address=0x6A)
         
         print("Starting sensor readings (Ctrl+C to stop)...")
         print("Format: Accel(x,y,z)[g] | Gyro(x,y,z)[deg/s]")
