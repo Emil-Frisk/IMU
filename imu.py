@@ -34,6 +34,9 @@ class ISM330DLC:
     # Accelerometer constants
     XL_OFFSET_SCALE = 0.000976525 # assumes default setting in (0x15 USR_OFF_W)
 
+    # Accelerometer values
+    XL_LPF_LOWEST_BANDWITH = 192
+
     # Accelerometer output registers
     OUTX_L_XL = 0x28
     OUTX_H_XL = 0x29
@@ -53,6 +56,9 @@ class ISM330DLC:
     # Expected WHO_AM_I value
     WHO_AM_I_VAL = 0x6A
     
+    def _enable_xl_lpf_filter(self): ### ODR / 400 - lowest bandiwth possible
+        self.bus.write_byte_data(self.address, self.CTRL8_XL, self.XL_LPF_LOWEST_BANDWITH)
+
     def _disable_accelerometer_filters(self):
         self.bus.write_byte_data(self.address, self.CTRL8_XL, 0x0) 
 
@@ -106,6 +112,8 @@ class ISM330DLC:
         self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) ### high performance mode
         if self.disabale_xl_filters:
             self._disable_accelerometer_filters()
+        else:
+            self._enable_xl_lpf_filter()
         
         if self.g_range == 2:
             self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz -> sample rate = 6.25hz
@@ -129,7 +137,7 @@ class ISM330DLC:
         value = (high << 8) | low
         return struct.unpack('<h', struct.pack('<H', value))[0]
     
-    def calculate_pitch_roll(x, y, z):
+    def calculate_pitch_roll(self, x, y, z):
         # Calculate pitch (rotation around X-axis)
         pitch = math.atan2(y, math.sqrt(x*x + z*z))
         
@@ -143,9 +151,9 @@ class ISM330DLC:
         return pitch_degrees, roll_degrees
 
     def _scale_xl_values(self, x_raw, y_raw, z_raw):
-        x = x_raw * (self.g_range * 32768.0)
-        y = y_raw * (self.g_range * 32768.0)
-        z = z_raw * (self.g_range * 32768.0)
+        x = x_raw * (self.g_range / 32768.0)
+        y = y_raw * (self.g_range / 32768.0)
+        z = z_raw * (self.g_range / 32768.0)
         return x, y, z
 
     def read_accelerometer(self):
@@ -160,6 +168,7 @@ class ISM330DLC:
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
         
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+
         pitch, roll = self.calculate_pitch_roll(x, y, z)
         return (pitch, roll)
     
