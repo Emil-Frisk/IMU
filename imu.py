@@ -59,6 +59,8 @@ class ISM330DLC:
     
     def _enable_xl_lpf_filter(self): ### ODR / 400 - lowest bandiwth possible
         self.bus.write_byte_data(self.address, self.CTRL8_XL, self.XL_LPF_LOWEST_BANDWITH)
+        value = self.bus.read_byte_data(self.address, self.CTRL8_XL)
+        print(f"CTRL8_XL value:{value} ")
 
     def _disable_accelerometer_filters(self):
         self.bus.write_byte_data(self.address, self.CTRL8_XL, 0x0) 
