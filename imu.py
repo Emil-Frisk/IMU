@@ -36,7 +36,7 @@ class ISM330DLC:
     XL_OFFSET_SCALE = 0.000976525 # assumes default setting in (0x15 USR_OFF_W)
 
     # Accelerometer values
-    XL_LPF_LOWEST_BANDWITH = 192
+    XL_LPF_LOWEST_BANDWITH = 96
 
     # Accelerometer output registers
     OUTX_L_XL = 0x28
