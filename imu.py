@@ -146,8 +146,8 @@ class ISM330DLC:
         roll = math.atan2(y, math.sqrt(x*x + z*z))
 
         # Convert from radians to degrees
-        pitch_degrees = math.degrees(pitch) - 0.25 
-        roll_degrees = math.degrees(roll) + 1
+        pitch_degrees = math.degrees(pitch) 
+        roll_degrees = math.degrees(roll)
 
         return pitch_degrees, roll_degrees
     def _scale_xl_values(self, x_raw, y_raw, z_raw):
@@ -207,7 +207,7 @@ def main():
     """Example usage of the ISM330DLC sensor"""
     try:
         # Initialize sensor (will auto-detect address)
-        sensor = ISM330DLC(address=0x6A, disable_xl_filters=False)
+        sensor = ISM330DLC(address=0x6A, disable_xl_filters=True)
         
         print("Starting sensor readings (Ctrl+C to stop)...")
         print("Format: Accel(x,y,z)[g] | Gyro(x,y,z)[deg/s]")
