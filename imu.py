@@ -23,6 +23,11 @@ class ISM330DLC:
     CTRL2_G = 0x11    # Gyroscope control register 2
     STATUS_REG = 0x1E
 
+    # Gyroscopes register addresses
+    CTRL2_G = 0x11
+    CTRL4_C = 0x13
+    CTRL6_C = 0x15
+    CTRL7_G = 0x16
 
     ### Accelerometer register addresses
     CTRL1_XL = 0x10   # Accelerometer control register 1
@@ -37,6 +42,9 @@ class ISM330DLC:
 
     # Accelerometer values
     XL_LPF_LOWEST_BANDWITH = 224
+    G_ODR = 0x60 # 416hz
+    # Gyro values
+    
 
     # Accelerometer output registers
     OUTX_L_XL = 0x28
@@ -65,7 +73,7 @@ class ISM330DLC:
     def _disable_accelerometer_filters(self):
         self.bus.write_byte_data(self.address, self.CTRL8_XL, 0x0) 
 
-    def __init__(self, bus_num=1, address=None, ODR=12.5, disable_xl_filters=True, g_range=2):
+    def __init__(self, bus_num=1, address=None, ODR=12.5, disable_xl_filters=True, g_range=2, dps=125):
         """
         Initialize ISM330DLC sensor
         
@@ -124,10 +132,16 @@ class ISM330DLC:
         else:
             raise Exception("Unsupported g_range")
 
+    def _configure_gyro(self):
+        self.bus.write_byte_data(self.address, self.CTRL2_G, self.G_ODR) # G_ODR
+        self.bus.write_byte_data(self.address, self.CTRL4_C, 0x0) # LPF1_Sel_G
+        self.bus.write_byte_data(self.address, self.CTRL6_C, 0x0) # LPF1 G_BW_SEL
+        self.bus.write_byte_data(self.address, self.CTRL7_G, 0x0) # HP_EN_G
 
     def _initialize_sensor(self):
         """Initialize sensor with basic configuration"""
         self._configure_accelerometer()
+        self._configure_gyro()
         
         # Wait for sensor to stabilize
         time.sleep(0.1)
@@ -163,7 +177,7 @@ class ISM330DLC:
         Read accelerometer data
         
         Returns:
-            tuple: (x, y, z) returns in g's
+            tuple: (x, y, z) returns in m/s
         """
         data = self.bus.read_i2c_block_data(self.address, 0x28, 6)
         
@@ -172,6 +186,11 @@ class ISM330DLC:
         z_raw = self._val_into_two_complement((data[5] << 8) | data[4])
         
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        
+        x = x*9.81
+        y = y*9.81
+        z = z*9.81
+
         return (x,y,z)
 
     def read_xl_degrees(self):
@@ -196,20 +215,15 @@ class ISM330DLC:
     
 
     def test(self):
-        x_raw = self._read_raw_axis(self.OUTX_L_XL, self.OUTX_H_XL)
-        y_raw = self._read_raw_axis(self.OUTY_L_XL, self.OUTY_H_XL)
-        z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
-        x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        value = self.bus.read_byte_data(self.address, self.CTRL2_G)
+        value4 = self.bus.read_byte_data(self.address, self.CTRL4_C)
+        value3 = self.bus.read_byte_data(self.address, self.CTRL6_C)
+        value2 = self.bus.read_byte_data(self.address, self.CTRL7_G)
 
-        print(f"First x_raw: {x_raw}; first y_raw: {y_raw}; first z_raw: {z_raw}")
-
-        data = self.bus.read_i2c_block_data(self.address, 0x28, 6)
-        
-        x_raw = self._val_into_two_complement((data[1] << 8) | data[0])
-        y_raw = self._val_into_two_complement((data[3] << 8) | data[2])
-        z_raw = self._val_into_two_complement((data[5] << 8) | data[4])
-        
-        print(f"Second x_raw: {x_raw}; Second y_raw: {y_raw}; Second z_raw: {z_raw}")
+        print(f"Gyro control2 register: {value}")
+        print(f"Gyro control4 register: {value4}")
+        print(f"Gyro control6 register: {value3}")
+        print(f"Gyro control7 register: {value2}")
     
     def read_gyroscope(self):
         """

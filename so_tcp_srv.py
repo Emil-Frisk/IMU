@@ -93,7 +93,7 @@ class TCPSocketServer():
                         if not action:
                             raise Exception("No action given.")
                         if action == "r_xl":
-                            pitch, roll = self.sensor.read_accelerometer()
+                            pitch, roll = self.sensor.read_xl_degrees()
                             message = f"message={pitch},{roll}|".encode("utf-8")
                             client_socket.sendall(message)
                     else:
