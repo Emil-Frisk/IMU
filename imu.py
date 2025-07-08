@@ -36,7 +36,7 @@ class ISM330DLC:
     XL_OFFSET_SCALE = 0.000976525 # assumes default setting in (0x15 USR_OFF_W)
 
     # Accelerometer values
-    XL_LPF_LOWEST_BANDWITH = 96
+    XL_LPF_LOWEST_BANDWITH = 224
 
     # Accelerometer output registers
     OUTX_L_XL = 0x28
@@ -120,7 +120,7 @@ class ISM330DLC:
             self._enable_xl_lpf_filter()
         
         if self.g_range == 2:
-            self.bus.write_byte_data(self.address, self.CTRL1_XL, 0x10) # ODR 12.5hz -> sample rate = 6.25hz
+            self.bus.write_byte_data(self.address, self.CTRL1_XL, 80) # ODR 12.5hz -> sample rate = 6.25hz
         else:
             raise Exception("Unsupported g_range")
 
@@ -163,16 +163,53 @@ class ISM330DLC:
         Read accelerometer data
         
         Returns:
-            tuple: (x, y, z) returns in angles
+            tuple: (x, y, z) returns in g's
         """
+        data = self.bus.read_i2c_block_data(self.address, 0x28, 6)
+        
+        x_raw = self._val_into_two_complement((data[1] << 8) | data[0])
+        y_raw = self._val_into_two_complement((data[3] << 8) | data[2])
+        z_raw = self._val_into_two_complement((data[5] << 8) | data[4])
+        
+        x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        return (x,y,z)
+
+    def read_accelerometer_degrees(self):
+        """
+        Read accelerometer data
+        
+        Returns:
+            tuple: (x, y) returns in angles
+        """
+        data = self.bus.read_i2c_block_data(self.address, 0x28, 6)
+        
+        x_raw = self._val_into_two_complement((data[1] << 8) | data[0])
+        y_raw = self._val_into_two_complement((data[3] << 8) | data[2])
+        z_raw = self._val_into_two_complement((data[5] << 8) | data[4])
+        
+        x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
+        pitch, roll = self.calculate_pitch_roll(x, y, z)
+        return (pitch, roll)    
+
+    def _val_into_two_complement(self, value):
+        return struct.unpack('<h', struct.pack('<H', value))[0]
+    
+
+    def test(self):
         x_raw = self._read_raw_axis(self.OUTX_L_XL, self.OUTX_H_XL)
         y_raw = self._read_raw_axis(self.OUTY_L_XL, self.OUTY_H_XL)
         z_raw = self._read_raw_axis(self.OUTZ_L_XL, self.OUTZ_H_XL)
-        
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
-        print(f"{x,y,z}")
-        pitch, roll = self.calculate_pitch_roll(x, y, z)
-        return (pitch, roll)
+
+        print(f"First x_raw: {x_raw}; first y_raw: {y_raw}; first z_raw: {z_raw}")
+
+        data = self.bus.read_i2c_block_data(self.address, 0x28, 6)
+        
+        x_raw = self._val_into_two_complement((data[1] << 8) | data[0])
+        y_raw = self._val_into_two_complement((data[3] << 8) | data[2])
+        z_raw = self._val_into_two_complement((data[5] << 8) | data[4])
+        
+        print(f"Second x_raw: {x_raw}; Second y_raw: {y_raw}; Second z_raw: {z_raw}")
     
     def read_gyroscope(self):
         """
@@ -209,7 +246,7 @@ def main():
     """Example usage of the ISM330DLC sensor"""
     try:
         # Initialize sensor (will auto-detect address)
-        sensor = ISM330DLC(address=0x6A, disable_xl_filters=True)
+        sensor = ISM330DLC(address=0x6A, disable_xl_filters=False)
         
         print("Starting sensor readings (Ctrl+C to stop)...")
         print("Format: Accel(x,y,z)[g] | Gyro(x,y,z)[deg/s]")
