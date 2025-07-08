@@ -158,7 +158,7 @@ class ISM330DLC:
         z = z_raw * (self.g_range / 32768.0)
         return x, y, z
 
-    def read_accelerometer(self):
+    def read_xl(self):
         """
         Read accelerometer data
         
@@ -174,7 +174,7 @@ class ISM330DLC:
         x, y, z  = self._scale_xl_values(x_raw, y_raw, z_raw)
         return (x,y,z)
 
-    def read_accelerometer_degrees(self):
+    def read_xl_degrees(self):
         """
         Read accelerometer data
         
