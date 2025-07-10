@@ -1,4 +1,6 @@
 import socket
+import numpy as np
+import json
 from time import sleep
 import threading
 import logging
@@ -101,7 +103,8 @@ class TCPSocketServer():
                         elif action == "debug":
                             data = self.debug.read_imus()
                             debug_vectors = data[1]
-                            message = f"message={debug_vectors}|".encode("utf-8")
+                            json_message = json.dumps(debug_vectors.tolist() if isistance(debug_vectors, np.ndarray) else debug_vectors)
+                            message = f"message={json_message}|".encode("utf-8")
                             client_socket.sendall(message)
                     else:
                         self.logger.info(f"Client: {client_address} has closed their connection")
