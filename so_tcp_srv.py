@@ -4,6 +4,7 @@ import threading
 import logging
 import sys
 from imu import ISM330DLC
+from debug_vectors import ImuDebug
 
 
 class TCPSocketServer():
@@ -14,6 +15,7 @@ class TCPSocketServer():
         self.clients = {}
         self.server_socket = None
         self.logger= self._setup_logger(logger)
+        self.debug = ImuDebug()
 
     def _start_thread(self, f, *args):
         thread = threading.Thread(
@@ -95,6 +97,11 @@ class TCPSocketServer():
                         if action == "r_xl":
                             pitch, roll = self.sensor.read_xl_degrees()
                             message = f"message={pitch},{roll}|".encode("utf-8")
+                            client_socket.sendall(message)
+                        elif action == "debug":
+                            data = self.debug.read_imus()
+                            debug_vectors = data[1]
+                            message = f"message={debug_vectors}|".encode("utf-8")
                             client_socket.sendall(message)
                     else:
                         self.logger.info(f"Client: {client_address} has closed their connection")
